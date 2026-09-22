@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Film, PlusCircle, Users, ArrowRight, Play, X, Sparkles } from 'lucide-react';
+import {
+  Film,
+  PlusCircle,
+  Users,
+  ArrowRight,
+  Play,
+  X,
+  Sparkles,
+} from 'lucide-react';
 import { sounds } from '../../game/soundEffects';
 
 interface LandingPageProps {
@@ -25,11 +33,49 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 }) => {
   const [playerName, setPlayerName] = useState('');
   const [roomCode, setRoomCode] = useState('');
-  const [modalMode, setModalMode] = useState<ModalMode>('NONE');
+  const [modalMode, setModalMode] =
+    useState<ModalMode>('NONE');
 
+  /*
+   * Detect room code from:
+   *
+   * 1. prefilledRoomCode supplied by App.tsx
+   * 2. Direct invite URL:
+   *
+   *    /room/AB7KQ2
+   *
+   * This allows a player to open a shared invite
+   * link and automatically see the Join Room modal.
+   */
   useEffect(() => {
-    if (prefilledRoomCode) {
-      setRoomCode(prefilledRoomCode.toUpperCase());
+    let detectedRoomCode =
+      prefilledRoomCode?.trim();
+
+    if (!detectedRoomCode) {
+      const pathParts =
+        window.location.pathname
+          .split('/')
+          .filter(Boolean);
+
+      if (
+        pathParts.length >= 2 &&
+        pathParts[0].toLowerCase() === 'room'
+      ) {
+        detectedRoomCode =
+          pathParts[1];
+      }
+    }
+
+    if (
+      detectedRoomCode &&
+      /^[A-Za-z0-9]{6}$/.test(
+        detectedRoomCode
+      )
+    ) {
+      setRoomCode(
+        detectedRoomCode.toUpperCase()
+      );
+
       setModalMode('JOIN');
     }
   }, [prefilledRoomCode]);
@@ -37,12 +83,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const handleOpenCreate = () => {
     sounds.playClick();
     onClearError();
+
     setModalMode('CREATE');
   };
 
   const handleOpenJoin = () => {
     sounds.playClick();
     onClearError();
+
     setModalMode('JOIN');
   };
 
@@ -51,22 +99,50 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     onClearError();
   };
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
+  const handleCreateSubmit = (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
 
-    if (!playerName.trim()) return;
+    const trimmedName =
+      playerName.trim();
 
-    onCreateRoom(playerName.trim());
+    if (!trimmedName) {
+      return;
+    }
+
+    onCreateRoom(trimmedName);
   };
 
-  const handleJoinSubmit = (e: React.FormEvent) => {
+  const handleJoinSubmit = (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
 
-    if (!playerName.trim() || !roomCode.trim()) return;
+    const trimmedName =
+      playerName.trim();
+
+    const normalizedRoomCode =
+      roomCode.trim().toUpperCase();
+
+    if (
+      !trimmedName ||
+      !normalizedRoomCode
+    ) {
+      return;
+    }
+
+    if (
+      !/^[A-Za-z0-9]{6}$/.test(
+        normalizedRoomCode
+      )
+    ) {
+      return;
+    }
 
     onJoinRoom(
-      roomCode.trim().toUpperCase(),
-      playerName.trim()
+      normalizedRoomCode,
+      trimmedName
     );
   };
 
@@ -81,17 +157,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* HERO BRANDING */}
         <div className="landing-hero-card">
           <div className="landing-badge">
-            <Sparkles size={16} className="text-amber-400" />
-            <span>Tollywood Cinema Multiplayer</span>
+            <Sparkles
+              size={16}
+              className="text-amber-400"
+            />
+
+            <span>
+              Tollywood Cinema Multiplayer
+            </span>
           </div>
 
           <div className="landing-brand-title-group">
             <div className="landing-film-icon-badge">
-              <Film size={42} className="landing-film-icon" />
+              <Film
+                size={42}
+                className="landing-film-icon"
+              />
             </div>
 
             <h1 className="landing-main-title">
-              TFI <span className="highlight-gold">CODENAMES</span>
+              TFI{' '}
+              <span className="highlight-gold">
+                CODENAMES
+              </span>
             </h1>
 
             <p className="landing-subtitle">
@@ -100,8 +188,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           <p className="landing-description">
-            Connect with friends, choose your team and role,
-            then battle through Telugu cinema.
+            Connect with friends, choose your
+            team and role, then battle through
+            Telugu cinema.
           </p>
 
           {/* PRIMARY ACTION BUTTONS */}
@@ -112,7 +201,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               id="btn-create-room"
             >
               <PlusCircle size={20} />
-              <span>CREATE ROOM</span>
+
+              <span>
+                CREATE ROOM
+              </span>
             </button>
 
             <button
@@ -121,26 +213,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               id="btn-join-room"
             >
               <Users size={20} />
-              <span>JOIN ROOM</span>
+
+              <span>
+                JOIN ROOM
+              </span>
             </button>
           </div>
 
           {/* LOCAL PASS & PLAY OPTION */}
           <div className="landing-footer-option">
             <button
-              onClick={onPlayLocal}
+              onClick={() => {
+                sounds.playClick();
+                onPlayLocal();
+              }}
               className="btn-pass-play"
             >
               <Play size={15} />
+
               <span>
-                Or Play Local Pass & Play on this device
+                Or Play Local Pass & Play
+                on this device
               </span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* CREATE ROOM MODAL */}
+      {/* ==========================================
+          CREATE ROOM MODAL
+          ========================================== */}
       {modalMode === 'CREATE' && (
         <div
           className="modal-backdrop"
@@ -148,7 +250,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         >
           <div
             className="landing-modal-card"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) =>
+              e.stopPropagation()
+            }
           >
             <div className="modal-header-row">
               <div className="modal-title-group">
@@ -157,12 +261,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   className="text-amber-400"
                 />
 
-                <h2>Create Multiplayer Room</h2>
+                <h2>
+                  Create Multiplayer Room
+                </h2>
               </div>
 
               <button
                 onClick={handleCloseModal}
                 className="close-modal-btn"
+                type="button"
+                aria-label="Close"
               >
                 <X size={20} />
               </button>
@@ -183,11 +291,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   placeholder="e.g. Naresh, Rahul, Sai..."
                   value={playerName}
                   onChange={(e) =>
-                    setPlayerName(e.target.value)
+                    setPlayerName(
+                      e.target.value
+                    )
                   }
                   maxLength={20}
                   required
                   autoFocus
+                  autoComplete="name"
                   className="landing-input"
                 />
               </div>
@@ -219,7 +330,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       )}
 
-      {/* JOIN ROOM MODAL */}
+      {/* ==========================================
+          JOIN ROOM MODAL
+          ========================================== */}
       {modalMode === 'JOIN' && (
         <div
           className="modal-backdrop"
@@ -227,7 +340,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         >
           <div
             className="landing-modal-card"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) =>
+              e.stopPropagation()
+            }
           >
             <div className="modal-header-row">
               <div className="modal-title-group">
@@ -236,12 +351,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   className="text-blue-400"
                 />
 
-                <h2>Join Multiplayer Room</h2>
+                <h2>
+                  Join Multiplayer Room
+                </h2>
               </div>
 
               <button
                 onClick={handleCloseModal}
                 className="close-modal-btn"
+                type="button"
+                aria-label="Close"
               >
                 <X size={20} />
               </button>
@@ -263,12 +382,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   value={roomCode}
                   onChange={(e) =>
                     setRoomCode(
-                      e.target.value.toUpperCase()
+                      e.target.value
+                        .toUpperCase()
+                        .replace(
+                          /[^A-Z0-9]/g,
+                          ''
+                        )
+                        .slice(0, 6)
                     )
                   }
                   maxLength={6}
                   required
                   autoFocus
+                  autoComplete="off"
+                  spellCheck={false}
                   className="landing-input room-code-input"
                 />
               </div>
@@ -284,10 +411,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   placeholder="e.g. Arjun, Vamsi, Kiran..."
                   value={playerName}
                   onChange={(e) =>
-                    setPlayerName(e.target.value)
+                    setPlayerName(
+                      e.target.value
+                    )
                   }
                   maxLength={20}
                   required
+                  autoComplete="name"
                   className="landing-input"
                 />
               </div>
